@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatty Cathy</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js" integrity="sha512-iKDtgDyTHjAitUDdLljGhenhPwrbBfqTKWO1mkhSFH3A7blITC9MhYon6SjnMhp4o0rADGw9yAC6EW4t5a4K3g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js" integrity="sha512-1QvjE7BtotQjkq8PxLeF6P46gEpBRXuskzIVgjFpekzFVF4yjRgrQvTG1MTOJ3yQgvTteKAcO7DSZI92+u/yZw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="max-w-4xl mx-auto p-4"></div>
+        <h1 class="text-3xl font-bold text-center mb-4">Chatty Cathy</h1>
+        <div class="flex items-center space-x-2 mb-4 mx-8">
+            <input type="text" id="message" placeholder="Enter your message here" class="flex-1 p-2 border border-gray-300 rounded shadow-sm focus:outline-none focus:ring focus:ring-blue-300" onkeypress="if(event.key === 'Enter') sendMessage()">
+            <button onclick="sendMessage()" class="px-4 py-2 bg-blue-500 text-white rounded shadow hover:bg-blue-600 hover:cursor-pointer">Send</button>
+        </div>
+        <div id="chat" class="bg-white m-8 rounded shadow overflow-y-scroll" style="height: 80vh;"></div>
+    </div>
+    <script>
+        var username = "Guest";
+        username = prompt("Enter your username") || username;
+        var stompClient = null;
+
+        function connect() {
+            var socket = new SockJS('http://vps2.cryptizism.com:8083/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function(frame) {
+                console.log('Connected: ' + frame);
+                stompClient.subscribe('/topic/main', function(messageOutput) {
+                    showMessageOutput(JSON.parse(messageOutput.body));
+                });
+            });
+        }
+
+        function showMessageOutput(messageOutput) {
+            var container = document.getElementById('chat');
+            var bottomScroll = container.scrollHeight - container.clientHeight <= container.scrollTop + 1;
+            var messageElement = document.createElement('div');
+            messageElement.classList.add('odd:bg-white', 'even:bg-gray-100', 'p-2');
+            var textElement = document.createElement('p');
+            var messageText = messageOutput.userName + ": " + messageOutput.message;
+            textElement.textContent = messageText;
+            messageElement.appendChild(textElement);
+            container.appendChild(messageElement);
+            if (bottomScroll) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        function sendMessage() {
+            var messageInput = document.getElementById('message');
+            if (messageInput.value === '') return;
+            var message = messageInput.value;
+            stompClient.send("/app/main", {}, JSON.stringify({ 'message': message, 'userName': username }));
+            messageInput.value = '';
+        }
+
+        connect();
+    </script>
+</body>
+</html>
